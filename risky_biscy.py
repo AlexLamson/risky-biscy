@@ -14,7 +14,7 @@ class RiskyBiscyGame:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Risky Biscy - Risk it for a Biscuit!")
-        self.root.geometry("500x600")
+        self.root.geometry("600x700")
         self.root.configure(bg='#2c3e50')
         
         # Game state
@@ -23,6 +23,7 @@ class RiskyBiscyGame:
         self.test_mode = False
         self.name_locked = False  # Prevent name changes after tutorial
         self.has_no_biscuits_taunt = False  # Boolean flag for name taunt
+        self.selected_risk_set = tk.StringVar(value="general")  # Default selection
         
         # JSONBin.io configuration - You'll need to replace with your actual bin ID and API key
         self.jsonbin_url = "https://api.jsonbin.io/v3/b/68b2750843b1c97be9300330"  # Replace with your bin ID
@@ -32,13 +33,30 @@ class RiskyBiscyGame:
             "X-Bin-Meta": "false"  # Don't return metadata
         }
         
-        # Prank probabilities (out of 100)
-        self.prank_chance = 25  # 25% chance of prank
-        self.point_chance = 60  # 60% chance of point
-        self.nothing_chance = 15  # 15% chance of nothing
+        # Define risk sets with their probabilities and actions
+        self.risk_sets = {
+            "general": {
+                "name": "General Risks",
+                "description": "Classic risk/reward gameplay",
+                "prank_chance": 25,
+                "reward_chance": 60,
+                "nothing_chance": 15,
+                "reward_method": self.general_reward,
+                "prank_method": self.general_prank
+            },
+            "sabotage": {
+                "name": "Sabotage Mode",
+                "description": "Reduce another player's score by 1, but risk losing 5 points",
+                "prank_chance": 40,  # Higher risk for higher stakes
+                "reward_chance": 45,
+                "nothing_chance": 15,
+                "reward_method": self.sabotage_reward,
+                "prank_method": self.sabotage_prank
+            }
+        }
         
-        # DRY prank enumeration mapping
-        self.pranks = {
+        # DRY prank enumeration mapping for general risks
+        self.general_pranks = {
             0: {
                 'name': 'Desktop Files',
                 'method': self.prank_desktop_files,
@@ -69,16 +87,16 @@ class RiskyBiscyGame:
         # Create tutorial window
         tutorial = tk.Toplevel(self.root)
         tutorial.title("Welcome to Risky Biscy!")
-        tutorial.geometry("400x500")
+        tutorial.geometry("450x600")
         tutorial.configure(bg='#2c3e50')
         tutorial.transient(self.root)
         tutorial.grab_set()  # Modal dialog
         
         # Center the tutorial window
         tutorial.update_idletasks()
-        x = (tutorial.winfo_screenwidth() // 2) - (400 // 2)
-        y = (tutorial.winfo_screenheight() // 2) - (500 // 2)
-        tutorial.geometry(f"400x500+{x}+{y}")
+        x = (tutorial.winfo_screenwidth() // 2) - (450 // 2)
+        y = (tutorial.winfo_screenheight() // 2) - (600 // 2)
+        tutorial.geometry(f"450x600+{x}+{y}")
         
         # Tutorial content
         tk.Label(tutorial, text="🍪 RISKY BISCY 🍪", 
@@ -87,17 +105,27 @@ class RiskyBiscyGame:
         
         tutorial_text = """Welcome to Risky Biscy!
 
-The premise is simple:
-• Click "RISK IT!" to take a chance
+Now with multiple risk modes:
+
+🎲 GENERAL RISKS:
 • 60% chance: Earn a biscuit point! 🍪
 • 25% chance: Get pranked! 😈
 • 15% chance: Nothing happens... 😐
 
+⚔️ SABOTAGE MODE:
+• 45% chance: Reduce another random 
+  player's score by 1 point! 💀
+• 40% chance: You lose 5 points! 😱
+• 15% chance: Nothing happens... 😐
+
 Pranks might:
 • Create files on your desktop
-• Rickroll you in your browser
+• Rickroll you in your browser  
 • Make you lose 2 points
 • Add a taunting suffix to your name
+
+Choose your risk set, then confirm 
+your choice to take the risk!
 
 Your goal is to earn as many biscuit 
 points as possible and climb the 
@@ -107,7 +135,7 @@ Are you brave enough to risk it
 for a biscuit?"""
         
         text_label = tk.Label(tutorial, text=tutorial_text,
-                             font=('Arial', 11),
+                             font=('Arial', 10),
                              bg='#2c3e50', fg='#ecf0f1',
                              justify=tk.LEFT)
         text_label.pack(pady=20, padx=20)
@@ -178,12 +206,40 @@ for a biscuit?"""
                                       bg='#2c3e50', fg='#2ecc71')
         self.points_display.pack(pady=10)
         
-        # Main button
-        self.risk_button = tk.Button(self.root, text="RISK IT!", 
+        # Risk set selection frame
+        risk_selection_frame = tk.Frame(self.root, bg='#2c3e50')
+        risk_selection_frame.pack(pady=20)
+        
+        tk.Label(risk_selection_frame, text="Choose Your Risk Set:", 
+                font=('Arial', 14, 'bold'), 
+                bg='#2c3e50', fg='#3498db').pack(pady=5)
+        
+        # Radio buttons for risk sets
+        for risk_id, risk_data in self.risk_sets.items():
+            radio_frame = tk.Frame(risk_selection_frame, bg='#2c3e50')
+            radio_frame.pack(pady=5, fill='x')
+            
+            radio = tk.Radiobutton(radio_frame, 
+                                  text=risk_data["name"], 
+                                  variable=self.selected_risk_set, 
+                                  value=risk_id,
+                                  bg='#2c3e50', fg='#ecf0f1',
+                                  selectcolor='#34495e',
+                                  font=('Arial', 12, 'bold'))
+            radio.pack(side=tk.LEFT)
+            
+            desc_label = tk.Label(radio_frame, 
+                                 text=risk_data["description"],
+                                 bg='#2c3e50', fg='#95a5a6',
+                                 font=('Arial', 10))
+            desc_label.pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Confirm risk button
+        self.risk_button = tk.Button(self.root, text="CONFIRM & RISK IT!", 
                                     command=self.risk_it,
-                                    font=('Arial', 20, 'bold'),
+                                    font=('Arial', 18, 'bold'),
                                     bg='#e74c3c', fg='white',
-                                    width=15, height=2)
+                                    width=18, height=2)
         self.risk_button.pack(pady=20)
         
         # Test mode controls
@@ -201,9 +257,12 @@ for a biscuit?"""
         self.test_buttons_frame = tk.Frame(self.root, bg='#2c3e50')
         self.test_buttons_frame.pack(pady=5)
         
-        # Test buttons (initially hidden) - now includes gain point option
+        # Test buttons (initially hidden)
         self.test_buttons = []
-        test_options = list(self.pranks.values()) + [{'name': 'Gain Point', 'method': self.test_gain_point}]
+        test_options = (list(self.general_pranks.values()) + 
+                       [{'name': 'Gain Point', 'method': self.test_gain_point},
+                        {'name': 'Sabotage Success', 'method': self.test_sabotage_success},
+                        {'name': 'Sabotage Fail', 'method': self.test_sabotage_fail}])
         
         for i, option in enumerate(test_options):
             btn = tk.Button(self.test_buttons_frame, text=option['name'],
@@ -277,32 +336,99 @@ for a biscuit?"""
         messagebox.showinfo("Test", "🍪 Gained 1 biscuit point! 🍪")
         self.update_leaderboard()
     
+    def test_sabotage_success(self):
+        """Test function for successful sabotage"""
+        self.sabotage_reward()
+    
+    def test_sabotage_fail(self):
+        """Test function for failed sabotage"""
+        self.sabotage_prank()
+    
     def risk_it(self):
         if self.test_mode:
             messagebox.showinfo("Test Mode", "Use the test buttons below!")
             return
         
-        # Determine outcome
+        selected_risk = self.selected_risk_set.get()
+        risk_data = self.risk_sets[selected_risk]
+        
+        # Determine outcome based on selected risk set
         roll = random.randint(1, 100)
         
-        if roll <= self.prank_chance:
-            # Execute random prank
-            prank_id = random.choice(list(self.pranks.keys()))
-            self.execute_prank(prank_id)
-        elif roll <= self.prank_chance + self.point_chance:
-            # Give point
-            self.points += 1
-            self.update_points_display()
-            messagebox.showinfo("Success!", "🍪 You earned a biscuit point! 🍪")
-            self.update_leaderboard()
+        if roll <= risk_data["prank_chance"]:
+            # Execute prank for this risk set
+            risk_data["prank_method"]()
+        elif roll <= risk_data["prank_chance"] + risk_data["reward_chance"]:
+            # Execute reward for this risk set
+            risk_data["reward_method"]()
         else:
             # Nothing happens
             messagebox.showinfo("Nothing", "Nothing happened... this time 😐")
     
-    def execute_prank(self, prank_id):
-        """Execute prank by ID using the DRY mapping"""
-        if prank_id in self.pranks:
-            self.pranks[prank_id]['method']()
+    # General risk set methods
+    def general_reward(self):
+        """General risk set reward: gain 1 point"""
+        self.points += 1
+        self.update_points_display()
+        messagebox.showinfo("Success!", "🍪 You earned a biscuit point! 🍪")
+        self.update_leaderboard()
+    
+    def general_prank(self):
+        """General risk set prank: execute random general prank"""
+        prank_id = random.choice(list(self.general_pranks.keys()))
+        self.execute_general_prank(prank_id)
+    
+    # Sabotage risk set methods
+    def sabotage_reward(self):
+        """Sabotage risk set reward: reduce another player's score by 1"""
+        try:
+            # Get current leaderboard
+            response = requests.get(self.jsonbin_url, headers=self.jsonbin_headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'record' in data:
+                    leaderboard = data['record'].get('leaderboard', [])
+                else:
+                    leaderboard = data.get('leaderboard', [])
+                
+                # Filter out current player and players with 0 points
+                other_players = [p for p in leaderboard if p['name'] != self.player_name and p['points'] > 0]
+                
+                if other_players:
+                    # Select random player to sabotage
+                    target = random.choice(other_players)
+                    target['points'] = max(0, target['points'] - 1)
+                    
+                    # Update leaderboard
+                    leaderboard.sort(key=lambda x: x['points'], reverse=True)
+                    leaderboard = leaderboard[:20]
+                    
+                    update_data = {'leaderboard': leaderboard}
+                    requests.put(self.jsonbin_url, json=update_data, headers=self.jsonbin_headers, timeout=10)
+                    
+                    messagebox.showinfo("Sabotage Success!", f"💀 You reduced {target['name']}'s score by 1 point! 💀")
+                    self.load_leaderboard()  # Refresh to show changes
+                else:
+                    messagebox.showinfo("No Target", "🤷 No other players to sabotage! You get nothing.")
+            else:
+                messagebox.showinfo("Connection Error", "Could not connect to leaderboard for sabotage!")
+                
+        except Exception as e:
+            print(f"Sabotage failed: {e}")
+            messagebox.showinfo("Sabotage Failed", "Could not execute sabotage!")
+    
+    def sabotage_prank(self):
+        """Sabotage risk set prank: lose 5 points"""
+        self.points = max(0, self.points - 5)
+        self.update_points_display()
+        messagebox.showwarning("SABOTAGE BACKFIRED!", "😱 Your sabotage attempt failed! You lost 5 points! 😱")
+        self.update_leaderboard()
+    
+    def execute_general_prank(self, prank_id):
+        """Execute general prank by ID using the DRY mapping"""
+        if prank_id in self.general_pranks:
+            self.general_pranks[prank_id]['method']()
         else:
             messagebox.showinfo("Error", "Unknown prank!")
     

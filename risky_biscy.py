@@ -21,6 +21,8 @@ class RiskyBiscyGame:
         self.player_name = ""
         self.points = 0
         self.test_mode = False
+        self.name_locked = False  # Prevent name changes after tutorial
+        self.has_no_biscuits_taunt = False  # Boolean flag for name taunt
         
         # JSONBin.io configuration - You'll need to replace with your actual bin ID and API key
         self.jsonbin_url = "https://api.jsonbin.io/v3/b/68b2750843b1c97be9300330"  # Replace with your bin ID
@@ -35,8 +37,122 @@ class RiskyBiscyGame:
         self.point_chance = 60  # 60% chance of point
         self.nothing_chance = 15  # 15% chance of nothing
         
-        self.setup_ui()
-        self.load_leaderboard()
+        # DRY prank enumeration mapping
+        self.pranks = {
+            0: {
+                'name': 'Desktop Files',
+                'method': self.prank_desktop_files,
+                'description': 'Create files on desktop'
+            },
+            1: {
+                'name': 'Rickroll',
+                'method': self.prank_rickroll,
+                'description': 'Open rickroll in browser'
+            },
+            2: {
+                'name': 'Lose Points',
+                'method': self.prank_lose_points,
+                'description': 'Lose 2 biscuit points'
+            },
+            3: {
+                'name': 'Name Taunt',
+                'method': self.prank_name_taunt,
+                'description': 'Add taunt to your name'
+            }
+        }
+        
+        # Show tutorial first
+        self.show_tutorial()
+        
+    def show_tutorial(self):
+        """Show tutorial splash screen"""
+        # Create tutorial window
+        tutorial = tk.Toplevel(self.root)
+        tutorial.title("Welcome to Risky Biscy!")
+        tutorial.geometry("400x500")
+        tutorial.configure(bg='#2c3e50')
+        tutorial.transient(self.root)
+        tutorial.grab_set()  # Modal dialog
+        
+        # Center the tutorial window
+        tutorial.update_idletasks()
+        x = (tutorial.winfo_screenwidth() // 2) - (400 // 2)
+        y = (tutorial.winfo_screenheight() // 2) - (500 // 2)
+        tutorial.geometry(f"400x500+{x}+{y}")
+        
+        # Tutorial content
+        tk.Label(tutorial, text="🍪 RISKY BISCY 🍪", 
+                font=('Arial', 24, 'bold'), 
+                bg='#2c3e50', fg='#f39c12').pack(pady=20)
+        
+        tutorial_text = """Welcome to Risky Biscy!
+
+The premise is simple:
+• Click "RISK IT!" to take a chance
+• 60% chance: Earn a biscuit point! 🍪
+• 25% chance: Get pranked! 😈
+• 15% chance: Nothing happens... 😐
+
+Pranks might:
+• Create files on your desktop
+• Rickroll you in your browser
+• Make you lose 2 points
+• Add a taunting suffix to your name
+
+Your goal is to earn as many biscuit 
+points as possible and climb the 
+leaderboard!
+
+Are you brave enough to risk it 
+for a biscuit?"""
+        
+        text_label = tk.Label(tutorial, text=tutorial_text,
+                             font=('Arial', 11),
+                             bg='#2c3e50', fg='#ecf0f1',
+                             justify=tk.LEFT)
+        text_label.pack(pady=20, padx=20)
+        
+        # Name input section
+        tk.Label(tutorial, text="Enter your player name:",
+                font=('Arial', 14, 'bold'),
+                bg='#2c3e50', fg='#e74c3c').pack(pady=(20, 5))
+        
+        name_entry = tk.Entry(tutorial, font=('Arial', 14), width=20)
+        name_entry.pack(pady=5)
+        name_entry.focus()
+        
+        warning_label = tk.Label(tutorial, 
+                               text="⚠️ Your name cannot be changed later! ⚠️",
+                               font=('Arial', 10),
+                               bg='#2c3e50', fg='#f39c12')
+        warning_label.pack(pady=5)
+        
+        def start_game():
+            name = name_entry.get().strip()
+            if not name:
+                messagebox.showwarning("Name Required", "Please enter your name!")
+                return
+            if len(name) > 20:
+                messagebox.showwarning("Name Too Long", "Name must be 20 characters or less!")
+                return
+            
+            self.player_name = name
+            self.name_locked = True
+            tutorial.destroy()
+            self.setup_ui()
+            self.load_leaderboard()
+        
+        def on_enter(event):
+            start_game()
+        
+        name_entry.bind('<Return>', on_enter)
+        
+        start_btn = tk.Button(tutorial, text="START GAME!",
+                             command=start_game,
+                             font=('Arial', 16, 'bold'),
+                             bg='#e74c3c', fg='white',
+                             width=15, height=2)
+        start_btn.pack(pady=20)
         
     def setup_ui(self):
         # Title
@@ -50,23 +166,8 @@ class RiskyBiscyGame:
                                  bg='#2c3e50', fg='#ecf0f1')
         subtitle_label.pack(pady=5)
         
-        # Player name input
-        name_frame = tk.Frame(self.root, bg='#2c3e50')
-        name_frame.pack(pady=10)
-        
-        tk.Label(name_frame, text="Your Name:", font=('Arial', 12), 
-                bg='#2c3e50', fg='#ecf0f1').pack(side=tk.LEFT)
-        
-        self.name_entry = tk.Entry(name_frame, font=('Arial', 12), width=20)
-        self.name_entry.pack(side=tk.LEFT, padx=10)
-        self.name_entry.bind('<Return>', self.set_name)
-        
-        set_name_btn = tk.Button(name_frame, text="Set Name", command=self.set_name,
-                                bg='#3498db', fg='white', font=('Arial', 10))
-        set_name_btn.pack(side=tk.LEFT, padx=5)
-        
-        # Current player display
-        self.player_display = tk.Label(self.root, text="Enter your name to start!", 
+        # Player name display (no editing allowed after tutorial)
+        self.player_display = tk.Label(self.root, text=f"Player: {self.get_display_name()}", 
                                       font=('Arial', 14, 'bold'), 
                                       bg='#2c3e50', fg='#e74c3c')
         self.player_display.pack(pady=10)
@@ -82,8 +183,7 @@ class RiskyBiscyGame:
                                     command=self.risk_it,
                                     font=('Arial', 20, 'bold'),
                                     bg='#e74c3c', fg='white',
-                                    width=15, height=2,
-                                    state='disabled')
+                                    width=15, height=2)
         self.risk_button.pack(pady=20)
         
         # Test mode controls
@@ -101,16 +201,25 @@ class RiskyBiscyGame:
         self.test_buttons_frame = tk.Frame(self.root, bg='#2c3e50')
         self.test_buttons_frame.pack(pady=5)
         
-        # Test buttons (initially hidden)
+        # Test buttons (initially hidden) - now includes gain point option
         self.test_buttons = []
-        test_pranks = ["Desktop Files", "Rickroll", "Lose Points", "Name Change"]
-        for i, prank in enumerate(test_pranks):
-            btn = tk.Button(self.test_buttons_frame, text=prank,
-                           command=lambda x=i: self.test_prank(x),
+        test_options = list(self.pranks.values()) + [{'name': 'Gain Point', 'method': self.test_gain_point}]
+        
+        for i, option in enumerate(test_options):
+            btn = tk.Button(self.test_buttons_frame, text=option['name'],
+                           command=lambda method=option['method']: method(),
                            bg='#9b59b6', fg='white', font=('Arial', 8))
             btn.pack(side=tk.LEFT, padx=2)
             btn.pack_forget()  # Hide initially
             self.test_buttons.append(btn)
+        
+        # Test mode name change button (only in test mode)
+        self.test_name_btn = tk.Button(self.test_buttons_frame, text="Change Name",
+                                      command=self.test_change_name,
+                                      bg='#e67e22', fg='white', font=('Arial', 8))
+        self.test_name_btn.pack(side=tk.LEFT, padx=2)
+        self.test_name_btn.pack_forget()
+        self.test_buttons.append(self.test_name_btn)
         
         # Leaderboard
         leaderboard_frame = tk.Frame(self.root, bg='#2c3e50')
@@ -137,14 +246,13 @@ class RiskyBiscyGame:
                                command=self.load_leaderboard,
                                bg='#27ae60', fg='white', font=('Arial', 10))
         refresh_btn.pack(pady=5)
-        
-    def set_name(self, event=None):
-        name = self.name_entry.get().strip()
-        if name:
-            self.player_name = name
-            self.player_display.config(text=f"Player: {self.player_name}")
-            self.risk_button.config(state='normal')
-        
+    
+    def get_display_name(self):
+        """Get the display name with taunt suffix if applicable"""
+        if self.has_no_biscuits_taunt:
+            return f"{self.player_name} has no biscuits"
+        return self.player_name
+    
     def toggle_test_mode(self):
         self.test_mode = self.test_mode_var.get()
         if self.test_mode:
@@ -154,25 +262,22 @@ class RiskyBiscyGame:
             for btn in self.test_buttons:
                 btn.pack_forget()
     
-    def test_prank(self, prank_index):
-        if not self.player_name:
-            messagebox.showwarning("Warning", "Please set your name first!")
-            return
-            
-        if prank_index == 0:
-            self.prank_desktop_files()
-        elif prank_index == 1:
-            self.prank_rickroll()
-        elif prank_index == 2:
-            self.prank_lose_points()
-        elif prank_index == 3:
-            self.prank_name_change()
+    def test_change_name(self):
+        """Allow name change only in test mode"""
+        new_name = simpledialog.askstring("Change Name", "Enter new name:")
+        if new_name and new_name.strip():
+            self.player_name = new_name.strip()
+            self.has_no_biscuits_taunt = False  # Reset taunt
+            self.player_display.config(text=f"Player: {self.get_display_name()}")
+    
+    def test_gain_point(self):
+        """Test function to gain a point"""
+        self.points += 1
+        self.update_points_display()
+        messagebox.showinfo("Test", "🍪 Gained 1 biscuit point! 🍪")
+        self.update_leaderboard()
     
     def risk_it(self):
-        if not self.player_name:
-            messagebox.showwarning("Warning", "Please set your name first!")
-            return
-            
         if self.test_mode:
             messagebox.showinfo("Test Mode", "Use the test buttons below!")
             return
@@ -182,8 +287,8 @@ class RiskyBiscyGame:
         
         if roll <= self.prank_chance:
             # Execute random prank
-            prank_type = random.randint(0, 3)
-            self.execute_prank(prank_type)
+            prank_id = random.choice(list(self.pranks.keys()))
+            self.execute_prank(prank_id)
         elif roll <= self.prank_chance + self.point_chance:
             # Give point
             self.points += 1
@@ -192,17 +297,14 @@ class RiskyBiscyGame:
             self.update_leaderboard()
         else:
             # Nothing happens
-            messagebox.showinfo("Nothing", "Nothing happened... this time 😏")
+            messagebox.showinfo("Nothing", "Nothing happened... this time 😐")
     
-    def execute_prank(self, prank_type):
-        if prank_type == 0:
-            self.prank_desktop_files()
-        elif prank_type == 1:
-            self.prank_rickroll()
-        elif prank_type == 2:
-            self.prank_lose_points()
-        elif prank_type == 3:
-            self.prank_name_change()
+    def execute_prank(self, prank_id):
+        """Execute prank by ID using the DRY mapping"""
+        if prank_id in self.pranks:
+            self.pranks[prank_id]['method']()
+        else:
+            messagebox.showinfo("Error", "Unknown prank!")
     
     def prank_desktop_files(self):
         """Create blank files on desktop"""
@@ -222,6 +324,10 @@ class RiskyBiscyGame:
                 if os.path.isdir(path):
                     desktop_path = path
                     break
+            
+            if not desktop_path:
+                messagebox.showinfo("Prank Failed", "Could not find desktop folder!")
+                return
             
             file_names = ["you_got_pranked.txt", "no_biscuits_for_you.txt", 
                          "risky_business.txt", "shouldnt_have_risked_it.txt"]
@@ -253,13 +359,13 @@ class RiskyBiscyGame:
         messagebox.showwarning("PRANKED!", "😭 You lost 2 biscuit points! 😭")
         self.update_leaderboard()
     
-    def prank_name_change(self):
-        """Add 'has no biscuits' to username"""
-        if " has no biscuits" not in self.player_name:
-            self.player_name += " has no biscuits"
-            self.player_display.config(text=f"Player: {self.player_name}")
+    def prank_name_taunt(self):
+        """Add 'has no biscuits' taunt flag (client-side only)"""
+        if not self.has_no_biscuits_taunt:
+            self.has_no_biscuits_taunt = True
+            self.player_display.config(text=f"Player: {self.get_display_name()}")
             messagebox.showwarning("PRANKED!", "🏷️ Your name got a special addition! 🏷️")
-            self.update_leaderboard()
+            # Note: We don't update leaderboard here since the server name stays the same
     
     def update_points_display(self):
         self.points_display.config(text=f"Points: {self.points}")
@@ -288,7 +394,7 @@ class RiskyBiscyGame:
             self.display_leaderboard([])
     
     def update_leaderboard(self):
-        """Update player score on leaderboard"""
+        """Update player score on leaderboard using the original name (not display name)"""
         try:
             # First, get current leaderboard
             response = requests.get(self.jsonbin_url, headers=self.jsonbin_headers, timeout=10)
@@ -304,10 +410,10 @@ class RiskyBiscyGame:
             else:
                 leaderboard = []
             
-            # Update or add player
+            # Update or add player using original name (not display name with taunt)
             player_found = False
             for player in leaderboard:
-                if player['name'] == self.player_name:
+                if player['name'] == self.player_name:  # Use original name
                     player['points'] = self.points
                     player_found = True
                     break
@@ -349,7 +455,12 @@ class RiskyBiscyGame:
             else:
                 medal = f"{i}."
             
-            entry = f"{medal} {player['name']} - {player['points']} points"
+            # Show display name if it's the current player
+            display_name = player['name']
+            if player['name'] == self.player_name:
+                display_name = self.get_display_name()
+            
+            entry = f"{medal} {display_name} - {player['points']} points"
             self.leaderboard_listbox.insert(tk.END, entry)
             
             # Highlight current player

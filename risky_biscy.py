@@ -9,12 +9,13 @@ import subprocess
 import platform
 from threading import Thread
 import time
+import math
 
 class RiskyBiscyGame:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Risky Biscy - Risk it for a Biscuit!")
-        self.root.geometry("600x700")
+        self.root.geometry("700x800")
         self.root.configure(bg='#2c3e50')
         
         # Game state
@@ -38,22 +39,27 @@ class RiskyBiscyGame:
             "general": {
                 "name": "General Risks",
                 "description": "Classic risk/reward gameplay",
-                "prank_chance": 25,
-                "reward_chance": 60,
-                "nothing_chance": 15,
-                "reward_method": self.general_reward,
-                "prank_method": self.general_prank
+                "sections": [
+                    {"name": "Win Point!", "chance": 60, "color": "#2ecc71", "method": self.general_reward, "emoji": "🍪"},
+                    {"name": "Get Pranked!", "chance": 25, "color": "#e74c3c", "method": self.general_prank, "emoji": "😈"},
+                    {"name": "Nothing...", "chance": 15, "color": "#95a5a6", "method": lambda: messagebox.showinfo("Nothing", "Nothing happened... this time 😐"), "emoji": "😐"}
+                ]
             },
             "sabotage": {
-                "name": "Sabotage Mode",
+                "name": "Sabotage Mode", 
                 "description": "Reduce another player's score by 1, but risk losing 5 points",
-                "prank_chance": 40,  # Higher risk for higher stakes
-                "reward_chance": 45,
-                "nothing_chance": 15,
-                "reward_method": self.sabotage_reward,
-                "prank_method": self.sabotage_prank
+                "sections": [
+                    {"name": "Sabotage Success!", "chance": 45, "color": "#9b59b6", "method": self.sabotage_reward, "emoji": "💀"},
+                    {"name": "Lose 5 Points!", "chance": 40, "color": "#c0392b", "method": self.sabotage_prank, "emoji": "😱"},
+                    {"name": "Nothing...", "chance": 15, "color": "#95a5a6", "method": lambda: messagebox.showinfo("Nothing", "Nothing happened... this time 😐"), "emoji": "😐"}
+                ]
             }
         }
+        
+        # Wheel animation state
+        self.spinning = False
+        self.spin_angle = 0
+        self.spin_speed = 0
         
         # DRY prank enumeration mapping for general risks
         self.general_pranks = {
@@ -208,7 +214,7 @@ for a biscuit?"""
         
         # Risk set selection frame
         risk_selection_frame = tk.Frame(self.root, bg='#2c3e50')
-        risk_selection_frame.pack(pady=20)
+        risk_selection_frame.pack(pady=10)
         
         tk.Label(risk_selection_frame, text="Choose Your Risk Set:", 
                 font=('Arial', 14, 'bold'), 
@@ -223,6 +229,7 @@ for a biscuit?"""
                                   text=risk_data["name"], 
                                   variable=self.selected_risk_set, 
                                   value=risk_id,
+                                  command=self.update_wheel,
                                   bg='#2c3e50', fg='#ecf0f1',
                                   selectcolor='#34495e',
                                   font=('Arial', 12, 'bold'))
@@ -234,13 +241,28 @@ for a biscuit?"""
                                  font=('Arial', 10))
             desc_label.pack(side=tk.LEFT, padx=(10, 0))
         
+        # Wheel of Fortune
+        wheel_frame = tk.Frame(self.root, bg='#2c3e50')
+        wheel_frame.pack(pady=15)
+        
+        tk.Label(wheel_frame, text="🎰 WHEEL OF FORTUNE 🎰", 
+                font=('Arial', 16, 'bold'), 
+                bg='#2c3e50', fg='#f39c12').pack(pady=5)
+        
+        # Create canvas for the wheel
+        self.wheel_canvas = tk.Canvas(wheel_frame, width=300, height=300, bg='#34495e', highlightthickness=0)
+        self.wheel_canvas.pack(pady=10)
+        
+        # Draw initial wheel
+        self.update_wheel()
+        
         # Confirm risk button
-        self.risk_button = tk.Button(self.root, text="CONFIRM & RISK IT!", 
-                                    command=self.risk_it,
+        self.risk_button = tk.Button(self.root, text="SPIN THE WHEEL!", 
+                                    command=self.spin_wheel,
                                     font=('Arial', 18, 'bold'),
                                     bg='#e74c3c', fg='white',
                                     width=18, height=2)
-        self.risk_button.pack(pady=20)
+        self.risk_button.pack(pady=15)
         
         # Test mode controls
         test_frame = tk.Frame(self.root, bg='#2c3e50')
@@ -344,26 +366,210 @@ for a biscuit?"""
         """Test function for failed sabotage"""
         self.sabotage_prank()
     
-    def risk_it(self):
-        if self.test_mode:
-            messagebox.showinfo("Test Mode", "Use the test buttons below!")
+    def update_wheel(self):
+        """Update the wheel display based on selected risk set"""
+        if not hasattr(self, 'wheel_canvas'):
             return
+            
+        self.wheel_canvas.delete("all")
         
         selected_risk = self.selected_risk_set.get()
-        risk_data = self.risk_sets[selected_risk]
+        if selected_risk not in self.risk_sets:
+            return
+            
+        sections = self.risk_sets[selected_risk]["sections"]
         
-        # Determine outcome based on selected risk set
+        # Calculate angles for each section
+        total_angle = 0
+        center_x, center_y = 150, 150
+        radius = 120
+        
+        # Draw wheel sections
+        for section in sections:
+            section_angle = (section["chance"] / 100.0) * 360
+            start_angle = total_angle
+            
+            # Draw the pie slice
+            self.wheel_canvas.create_arc(
+                center_x - radius, center_y - radius,
+                center_x + radius, center_y + radius,
+                start=start_angle, extent=section_angle,
+                fill=section["color"], outline='white', width=2
+            )
+            
+            # Add text labels
+            text_angle = math.radians(start_angle + section_angle / 2)
+            text_radius = radius * 0.7
+            text_x = center_x + text_radius * math.cos(text_angle)
+            text_y = center_y - text_radius * math.sin(text_angle)  # Negative because canvas Y is inverted
+            
+            # Add emoji
+            emoji_x = center_x + (radius * 0.85) * math.cos(text_angle)
+            emoji_y = center_y - (radius * 0.85) * math.sin(text_angle)
+            self.wheel_canvas.create_text(emoji_x, emoji_y, text=section["emoji"], 
+                                        font=('Arial', 20), fill='white')
+            
+            # Add percentage text
+            self.wheel_canvas.create_text(text_x, text_y, text=f"{section['chance']}%", 
+                                        font=('Arial', 12, 'bold'), fill='white')
+            
+            total_angle += section_angle
+        
+        # Draw center circle
+        center_radius = 15
+        self.wheel_canvas.create_oval(
+            center_x - center_radius, center_y - center_radius,
+            center_x + center_radius, center_y + center_radius,
+            fill='#2c3e50', outline='white', width=2
+        )
+        
+        # Draw pointer (arrow pointing down)
+        pointer_points = [
+            center_x, center_y - radius - 20,  # Top point
+            center_x - 15, center_y - radius - 5,  # Left point
+            center_x + 15, center_y - radius - 5   # Right point
+        ]
+        self.wheel_canvas.create_polygon(pointer_points, fill='#f39c12', outline='white', width=2)
+    
+    def spin_wheel(self):
+        """Spin the wheel with animation"""
+        if self.spinning or self.test_mode:
+            if self.test_mode:
+                messagebox.showinfo("Test Mode", "Use the test buttons below!")
+            return
+        
+        self.spinning = True
+        self.risk_button.config(state='disabled', text='SPINNING...')
+        
+        # Determine final outcome first
+        selected_risk = self.selected_risk_set.get()
+        sections = self.risk_sets[selected_risk]["sections"]
+        
+        # Calculate outcome
         roll = random.randint(1, 100)
+        cumulative_chance = 0
+        selected_section = None
         
-        if roll <= risk_data["prank_chance"]:
-            # Execute prank for this risk set
-            risk_data["prank_method"]()
-        elif roll <= risk_data["prank_chance"] + risk_data["reward_chance"]:
-            # Execute reward for this risk set
-            risk_data["reward_method"]()
-        else:
-            # Nothing happens
-            messagebox.showinfo("Nothing", "Nothing happened... this time 😐")
+        for section in sections:
+            cumulative_chance += section["chance"]
+            if roll <= cumulative_chance:
+                selected_section = section
+                break
+        
+        if not selected_section:
+            selected_section = sections[-1]  # Fallback
+        
+        # Calculate target angle (where the pointer should land)
+        section_start_angle = 0
+        for section in sections:
+            if section == selected_section:
+                # Land somewhere in this section
+                section_angle = (section["chance"] / 100.0) * 360
+                target_angle = section_start_angle + random.uniform(section_angle * 0.1, section_angle * 0.9)
+                break
+            section_start_angle += (section["chance"] / 100.0) * 360
+        
+        # Animation parameters
+        self.spin_speed = 20  # Initial speed
+        total_spins = random.randint(3, 6) * 360  # Multiple full rotations
+        self.target_angle = (360 - target_angle + total_spins) % 360  # Adjust for pointer position
+        self.current_spin_angle = 0
+        
+        # Start animation
+        self.animate_spin(selected_section)
+    
+    def animate_spin(self, final_section):
+        """Animate the wheel spinning"""
+        if not self.spinning:
+            return
+        
+        # Update spin angle
+        self.current_spin_angle += self.spin_speed
+        
+        # Gradually slow down as we approach the target
+        if self.current_spin_angle >= self.target_angle - 180:
+            self.spin_speed *= 0.95  # Slow down
+        
+        # Stop when we've reached the target and speed is low enough
+        if self.current_spin_angle >= self.target_angle and self.spin_speed < 1:
+            self.spinning = False
+            self.risk_button.config(state='normal', text='SPIN THE WHEEL!')
+            
+            # Execute the outcome after a brief pause
+            self.root.after(500, lambda: self.execute_outcome(final_section))
+            return
+        
+        # Redraw the wheel with rotation
+        self.draw_rotated_wheel(self.current_spin_angle)
+        
+        # Continue animation
+        self.root.after(50, lambda: self.animate_spin(final_section))
+    
+    def draw_rotated_wheel(self, rotation_angle):
+        """Draw the wheel rotated by the given angle"""
+        self.wheel_canvas.delete("all")
+        
+        selected_risk = self.selected_risk_set.get()
+        sections = self.risk_sets[selected_risk]["sections"]
+        
+        total_angle = rotation_angle
+        center_x, center_y = 150, 150
+        radius = 120
+        
+        # Draw wheel sections
+        for section in sections:
+            section_angle = (section["chance"] / 100.0) * 360
+            start_angle = total_angle
+            
+            # Draw the pie slice
+            self.wheel_canvas.create_arc(
+                center_x - radius, center_y - radius,
+                center_x + radius, center_y + radius,
+                start=start_angle, extent=section_angle,
+                fill=section["color"], outline='white', width=2
+            )
+            
+            # Add text labels
+            text_angle = math.radians(start_angle + section_angle / 2)
+            text_radius = radius * 0.7
+            text_x = center_x + text_radius * math.cos(text_angle)
+            text_y = center_y - text_radius * math.sin(text_angle)
+            
+            # Add emoji
+            emoji_x = center_x + (radius * 0.85) * math.cos(text_angle)
+            emoji_y = center_y - (radius * 0.85) * math.sin(text_angle)
+            self.wheel_canvas.create_text(emoji_x, emoji_y, text=section["emoji"], 
+                                        font=('Arial', 20), fill='white')
+            
+            # Add percentage text
+            self.wheel_canvas.create_text(text_x, text_y, text=f"{section['chance']}%", 
+                                        font=('Arial', 12, 'bold'), fill='white')
+            
+            total_angle += section_angle
+        
+        # Draw center circle
+        center_radius = 15
+        self.wheel_canvas.create_oval(
+            center_x - center_radius, center_y - center_radius,
+            center_x + center_radius, center_y + center_radius,
+            fill='#2c3e50', outline='white', width=2
+        )
+        
+        # Draw pointer (always pointing down, doesn't rotate)
+        pointer_points = [
+            center_x, center_y - radius - 20,
+            center_x - 15, center_y - radius - 5,
+            center_x + 15, center_y - radius - 5
+        ]
+        self.wheel_canvas.create_polygon(pointer_points, fill='#f39c12', outline='white', width=2)
+    
+    def execute_outcome(self, section):
+        """Execute the outcome that the wheel landed on"""
+        section["method"]()
+    
+    def risk_it(self):
+        """Legacy method - now handled by spin_wheel"""
+        self.spin_wheel()
     
     # General risk set methods
     def general_reward(self):

@@ -402,7 +402,7 @@ leaderboard!"""
             fill='#2c3e50', outline='white', width=2
         )
         
-        # Draw pointer (arrow pointing down)
+        # Draw pointer (arrow pointing up)
         pointer_points = [
             center_x, center_y - radius - 20,  # Top point
             center_x - 15, center_y - radius - 5,  # Left point
@@ -534,7 +534,7 @@ leaderboard!"""
             fill='#2c3e50', outline='white', width=2
         )
         
-        # Draw pointer (always pointing down, doesn't rotate)
+        # Draw pointer (always pointing up, doesn't rotate)
         pointer_points = [
             center_x, center_y - radius - 20,
             center_x - 15, center_y - radius - 5,
@@ -684,10 +684,7 @@ leaderboard!"""
     def load_leaderboard(self):
         """Load leaderboard from JSONBin.io"""
         try:
-            # Note: You'll need to create a JSONBin.io account and replace the URL and headers
             response = requests.get(self.jsonbin_url, headers=self.jsonbin_headers, timeout=10)
-            print(f"Load response status: {response.status_code}")  # Debug
-            print(f"Load response content: {response.text[:200]}...")  # Debug
             
             if response.status_code == 200:
                 data = response.json()
@@ -709,7 +706,6 @@ leaderboard!"""
         try:
             # First, get current leaderboard
             response = requests.get(self.jsonbin_url, headers=self.jsonbin_headers, timeout=10)
-            print(f"Get response status: {response.status_code}")  # Debug
             
             if response.status_code == 200:
                 data = response.json()
@@ -752,8 +748,6 @@ leaderboard!"""
             
         except Exception as e:
             print(f"Failed to update leaderboard: {e}")
-            import traceback
-            traceback.print_exc()  # More detailed error info
     
     def display_leaderboard(self, leaderboard):
         """Display leaderboard in the listbox"""

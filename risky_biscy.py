@@ -15,7 +15,6 @@ class RiskyBiscyGame:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Risky Biscy")
-        self.root.geometry("700x800")
         self.root.configure(bg='#2c3e50')
         
         # Game state
@@ -89,25 +88,24 @@ class RiskyBiscyGame:
         self.show_tutorial()
         
     def show_tutorial(self):
-        """Show tutorial splash screen"""
-        # Create tutorial window
-        tutorial = tk.Toplevel(self.root)
-        tutorial.title("Welcome to Risky Biscy!")
-        tutorial.geometry("450x600")
-        tutorial.configure(bg='#2c3e50')
-        tutorial.transient(self.root)
-        tutorial.grab_set()  # Modal dialog
-        
-        # Center the tutorial window
-        tutorial.update_idletasks()
-        x = (tutorial.winfo_screenwidth() // 2) - (450 // 2)
-        y = (tutorial.winfo_screenheight() // 2) - (600 // 2)
-        tutorial.geometry(f"450x600+{x}+{y}")
-        
+        """Show tutorial splash screen within the main window"""
+        # Center the window for the tutorial
+        width = 450
+        height = 600
+        self.root.update_idletasks()
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        self.root.resizable(False, False)
+
+        # Create a frame to hold all tutorial widgets for easy removal
+        self.tutorial_frame = tk.Frame(self.root, bg='#2c3e50')
+        self.tutorial_frame.pack(pady=20, padx=20, fill="both", expand=True)
+
         # Tutorial content
-        tk.Label(tutorial, text="🍪 RISKY BISCY 🍪", 
-                font=('Arial', 24, 'bold'), 
-                bg='#2c3e50', fg='#f39c12').pack(pady=20)
+        tk.Label(self.tutorial_frame, text="🍪 RISKY BISCY 🍪", 
+                 font=('Arial', 24, 'bold'), 
+                 bg='#2c3e50', fg='#f39c12').pack(pady=20)
         
         tutorial_text = """Welcome to Risky Biscy!
 
@@ -118,66 +116,64 @@ Your goal is to earn as many biscuit
 points as possible and climb the 
 leaderboard!"""
         
-        text_label = tk.Label(tutorial, text=tutorial_text,
+        text_label = tk.Label(self.tutorial_frame, text=tutorial_text,
                              font=('Arial', 10),
                              bg='#2c3e50', fg='#ecf0f1',
                              justify=tk.LEFT)
         text_label.pack(pady=20, padx=20)
         
         # Name input section
-        tk.Label(tutorial, text="Enter your player name:",
-                font=('Arial', 14, 'bold'),
-                bg='#2c3e50', fg='#e74c3c').pack(pady=(20, 5))
+        tk.Label(self.tutorial_frame, text="Enter your player name:",
+                 font=('Arial', 14, 'bold'),
+                 bg='#2c3e50', fg='#e74c3c').pack(pady=(20, 5))
         
-        name_entry = tk.Entry(tutorial, font=('Arial', 14), width=20)
-        name_entry.pack(pady=5)
-        name_entry.focus()
+        self.name_entry = tk.Entry(self.tutorial_frame, font=('Arial', 14), width=20)
+        self.name_entry.pack(pady=5)
+        self.name_entry.focus()
         
-        warning_label = tk.Label(tutorial, 
-                               text="⚠️ Your name cannot be changed later! ⚠️",
-                               font=('Arial', 10),
-                               bg='#2c3e50', fg='#f39c12')
-        warning_label.pack(pady=5)
+        tk.Label(self.tutorial_frame, 
+                 text="⚠️ Your name cannot be changed later! ⚠️",
+                 font=('Arial', 10),
+                 bg='#2c3e50', fg='#f39c12').pack(pady=5)
         
-        def start_game():
-            name = name_entry.get().strip()
-            if not name:
-                messagebox.showwarning("Name Required", "Please enter your name!")
-                return
-            if len(name) > 20:
-                messagebox.showwarning("Name Too Long", "Name must be 20 characters or less!")
-                return
-            
-            self.player_name = name
-            self.name_locked = True
-            tutorial.destroy()
-            self.setup_ui()
-            self.load_leaderboard()
+        self.name_entry.bind('<Return>', self.start_game)
         
-        def on_enter(event):
-            start_game()
-        
-        name_entry.bind('<Return>', on_enter)
-        
-        start_btn = tk.Button(tutorial, text="START GAME!",
-                             command=start_game,
+        start_btn = tk.Button(self.tutorial_frame, text="START GAME!",
+                             command=self.start_game,
                              font=('Arial', 16, 'bold'),
                              bg='#e74c3c', fg='white',
                              width=15, height=2)
         start_btn.pack(pady=20)
         
+    def start_game(self, event=None):
+        """Validates name, destroys tutorial, and starts the main game."""
+        name = self.name_entry.get().strip()
+        if not name:
+            messagebox.showwarning("Name Required", "Please enter your name!")
+            return
+        if len(name) > 20:
+            messagebox.showwarning("Name Too Long", "Name must be 20 characters or less!")
+            return
+            
+        self.player_name = name
+        self.name_locked = True
+        
+        # Remove the tutorial frame
+        self.tutorial_frame.destroy()
+
+        # Resize and re-center the main window for the game
+        self.root.resizable(True, True)
+        width = 700
+        height = 800
+        self.root.update_idletasks()
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        self.root.geometry(f'{width}x{height}+{x}+{y}')
+
+        self.setup_ui()
+        self.load_leaderboard()
+        
     def setup_ui(self):
-        # # Title
-        # title_label = tk.Label(self.root, text="🍪 RISKY BISCY 🍪", 
-        #                       font=('Arial', 20, 'bold'), 
-        #                       bg='#2c3e50', fg='#f39c12')
-        # title_label.pack(pady=10)
-        
-        # subtitle_label = tk.Label(self.root, text="Risk it for a Biscuit!", 
-        #                          font=('Arial', 12), 
-        #                          bg='#2c3e50', fg='#ecf0f1')
-        # subtitle_label.pack(pady=5)
-        
         # Player name display (no editing allowed after tutorial)
         self.player_display = tk.Label(self.root, text=f"Player: {self.get_display_name()}", 
                                       font=('Arial', 14, 'bold'), 
@@ -193,10 +189,6 @@ leaderboard!"""
         # Risk set selection frame
         risk_selection_frame = tk.Frame(self.root, bg='#2c3e50')
         risk_selection_frame.pack(pady=10)
-        
-        # tk.Label(risk_selection_frame, text="Choose Your Risk Set:", 
-        #         font=('Arial', 14, 'bold'), 
-        #         bg='#2c3e50', fg='#3498db').pack(pady=5)
         
         # Radio buttons for risk sets
         for risk_id, risk_data in self.risk_sets.items():
@@ -222,10 +214,6 @@ leaderboard!"""
         # Wheel of Fortune
         wheel_frame = tk.Frame(self.root, bg='#2c3e50')
         wheel_frame.pack(pady=15)
-        
-        # tk.Label(wheel_frame, text="🎰 WHEEL OF FORTUNE 🎰", 
-        #         font=('Arial', 16, 'bold'), 
-        #         bg='#2c3e50', fg='#f39c12').pack(pady=5)
         
         # Create canvas for the wheel
         self.wheel_canvas = tk.Canvas(wheel_frame, width=300, height=300, bg='#34495e', highlightthickness=0)

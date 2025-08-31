@@ -605,7 +605,7 @@ leaderboard!"""
     
     def sabotage_prank(self):
         """Sabotage risk set prank: lose 5 points"""
-        self.points = max(0, self.points - 5)
+        self.points = self.points - 5
         self.update_points_display()
         messagebox.showwarning("SABOTAGE BACKFIRED!", "😱 Your sabotage attempt failed! You lost 5 points! 😱")
         self.update_leaderboard()
@@ -665,7 +665,7 @@ leaderboard!"""
     
     def prank_lose_points(self):
         """Lose 2 points"""
-        self.points = max(0, self.points - 2)
+        self.points = self.points - 2
         self.update_points_display()
         messagebox.showwarning("PRANKED!", "😭 You lost 2 biscuit points! 😭")
         self.update_leaderboard()

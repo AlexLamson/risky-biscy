@@ -14,7 +14,7 @@ import math
 class RiskyBiscyGame:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Risky Biscy - Risk it for a Biscuit!")
+        self.root.title("Risky Biscy")
         self.root.geometry("700x800")
         self.root.configure(bg='#2c3e50')
         
@@ -111,34 +111,12 @@ class RiskyBiscyGame:
         
         tutorial_text = """Welcome to Risky Biscy!
 
-Now with multiple risk modes:
-
-🎲 GENERAL RISKS:
-• 60% chance: Earn a biscuit point! 🍪
-• 25% chance: Get pranked! 😈
-• 15% chance: Nothing happens... 😐
-
-⚔️ SABOTAGE MODE:
-• 45% chance: Reduce another random 
-  player's score by 1 point! 💀
-• 40% chance: You lose 5 points! 😱
-• 15% chance: Nothing happens... 😐
-
-Pranks might:
-• Create files on your desktop
-• Rickroll you in your browser  
-• Make you lose 2 points
-• Add a taunting suffix to your name
-
-Choose your risk set, then confirm 
-your choice to take the risk!
+Pick your risk mode, then spin the wheel.
+You'll either earn biscuit points or get pranked!
 
 Your goal is to earn as many biscuit 
 points as possible and climb the 
-leaderboard!
-
-Are you brave enough to risk it 
-for a biscuit?"""
+leaderboard!"""
         
         text_label = tk.Label(tutorial, text=tutorial_text,
                              font=('Arial', 10),
@@ -189,16 +167,16 @@ for a biscuit?"""
         start_btn.pack(pady=20)
         
     def setup_ui(self):
-        # Title
-        title_label = tk.Label(self.root, text="🍪 RISKY BISCY 🍪", 
-                              font=('Arial', 20, 'bold'), 
-                              bg='#2c3e50', fg='#f39c12')
-        title_label.pack(pady=10)
+        # # Title
+        # title_label = tk.Label(self.root, text="🍪 RISKY BISCY 🍪", 
+        #                       font=('Arial', 20, 'bold'), 
+        #                       bg='#2c3e50', fg='#f39c12')
+        # title_label.pack(pady=10)
         
-        subtitle_label = tk.Label(self.root, text="Risk it for a Biscuit!", 
-                                 font=('Arial', 12), 
-                                 bg='#2c3e50', fg='#ecf0f1')
-        subtitle_label.pack(pady=5)
+        # subtitle_label = tk.Label(self.root, text="Risk it for a Biscuit!", 
+        #                          font=('Arial', 12), 
+        #                          bg='#2c3e50', fg='#ecf0f1')
+        # subtitle_label.pack(pady=5)
         
         # Player name display (no editing allowed after tutorial)
         self.player_display = tk.Label(self.root, text=f"Player: {self.get_display_name()}", 
@@ -216,9 +194,9 @@ for a biscuit?"""
         risk_selection_frame = tk.Frame(self.root, bg='#2c3e50')
         risk_selection_frame.pack(pady=10)
         
-        tk.Label(risk_selection_frame, text="Choose Your Risk Set:", 
-                font=('Arial', 14, 'bold'), 
-                bg='#2c3e50', fg='#3498db').pack(pady=5)
+        # tk.Label(risk_selection_frame, text="Choose Your Risk Set:", 
+        #         font=('Arial', 14, 'bold'), 
+        #         bg='#2c3e50', fg='#3498db').pack(pady=5)
         
         # Radio buttons for risk sets
         for risk_id, risk_data in self.risk_sets.items():
@@ -245,9 +223,9 @@ for a biscuit?"""
         wheel_frame = tk.Frame(self.root, bg='#2c3e50')
         wheel_frame.pack(pady=15)
         
-        tk.Label(wheel_frame, text="🎰 WHEEL OF FORTUNE 🎰", 
-                font=('Arial', 16, 'bold'), 
-                bg='#2c3e50', fg='#f39c12').pack(pady=5)
+        # tk.Label(wheel_frame, text="🎰 WHEEL OF FORTUNE 🎰", 
+        #         font=('Arial', 16, 'bold'), 
+        #         bg='#2c3e50', fg='#f39c12').pack(pady=5)
         
         # Create canvas for the wheel
         self.wheel_canvas = tk.Canvas(wheel_frame, width=300, height=300, bg='#34495e', highlightthickness=0)

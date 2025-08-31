@@ -163,7 +163,7 @@ leaderboard!"""
 
         # Resize and re-center the main window for the game
         self.root.resizable(True, True)
-        width = 700
+        width = 1000
         height = 800
         self.root.update_idletasks()
         x = (self.root.winfo_screenwidth() // 2) - (width // 2)
@@ -174,26 +174,39 @@ leaderboard!"""
         self.load_leaderboard()
         
     def setup_ui(self):
+        # Main container frame
+        main_frame = tk.Frame(self.root, bg='#2c3e50')
+        main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+
+        # Left frame for game controls
+        left_frame = tk.Frame(main_frame, bg='#2c3e50')
+        left_frame.pack(side=tk.LEFT, fill='y', padx=(0, 10))
+
+        # Right frame for leaderboard
+        right_frame = tk.Frame(main_frame, bg='#2c3e50')
+        right_frame.pack(side=tk.RIGHT, fill='both', expand=True)
+
+        # --- Populate Left Frame ---
         # Player name display (no editing allowed after tutorial)
-        self.player_display = tk.Label(self.root, text=f"Player: {self.get_display_name()}", 
+        self.player_display = tk.Label(left_frame, text=f"Player: {self.get_display_name()}", 
                                       font=('Arial', 14, 'bold'), 
                                       bg='#2c3e50', fg='#e74c3c')
         self.player_display.pack(pady=10)
         
         # Points display
-        self.points_display = tk.Label(self.root, text="Points: 0", 
+        self.points_display = tk.Label(left_frame, text="Points: 0", 
                                       font=('Arial', 16, 'bold'), 
                                       bg='#2c3e50', fg='#2ecc71')
         self.points_display.pack(pady=10)
         
         # Risk set selection frame
-        risk_selection_frame = tk.Frame(self.root, bg='#2c3e50')
+        risk_selection_frame = tk.Frame(left_frame, bg='#2c3e50')
         risk_selection_frame.pack(pady=10)
         
         # Radio buttons for risk sets
         for risk_id, risk_data in self.risk_sets.items():
             radio_frame = tk.Frame(risk_selection_frame, bg='#2c3e50')
-            radio_frame.pack(pady=5, fill='x')
+            radio_frame.pack(pady=5, fill='x', anchor='w')
             
             radio = tk.Radiobutton(radio_frame, 
                                   text=risk_data["name"], 
@@ -212,7 +225,7 @@ leaderboard!"""
             desc_label.pack(side=tk.LEFT, padx=(10, 0))
         
         # Wheel of Fortune
-        wheel_frame = tk.Frame(self.root, bg='#2c3e50')
+        wheel_frame = tk.Frame(left_frame, bg='#2c3e50')
         wheel_frame.pack(pady=15)
         
         # Create canvas for the wheel
@@ -223,7 +236,7 @@ leaderboard!"""
         self.update_wheel()
         
         # Confirm risk button
-        self.risk_button = tk.Button(self.root, text="SPIN THE WHEEL!", 
+        self.risk_button = tk.Button(left_frame, text="SPIN THE WHEEL!", 
                                     command=self.spin_wheel,
                                     font=('Arial', 18, 'bold'),
                                     bg='#e74c3c', fg='white',
@@ -231,7 +244,7 @@ leaderboard!"""
         self.risk_button.pack(pady=15)
         
         # Test mode controls
-        test_frame = tk.Frame(self.root, bg='#2c3e50')
+        test_frame = tk.Frame(left_frame, bg='#2c3e50')
         test_frame.pack(pady=10)
         
         self.test_mode_var = tk.BooleanVar()
@@ -242,7 +255,7 @@ leaderboard!"""
                                       selectcolor='#34495e')
         test_checkbox.pack(side=tk.LEFT)
         
-        self.test_buttons_frame = tk.Frame(self.root, bg='#2c3e50')
+        self.test_buttons_frame = tk.Frame(left_frame, bg='#2c3e50')
         self.test_buttons_frame.pack(pady=5)
         
         # Test buttons (initially hidden)
@@ -268,9 +281,9 @@ leaderboard!"""
         self.test_name_btn.pack_forget()
         self.test_buttons.append(self.test_name_btn)
         
-        # Leaderboard
-        leaderboard_frame = tk.Frame(self.root, bg='#2c3e50')
-        leaderboard_frame.pack(pady=20, fill='both', expand=True)
+        # --- Populate Right Frame ---
+        leaderboard_frame = tk.Frame(right_frame, bg='#2c3e50')
+        leaderboard_frame.pack(fill='both', expand=True)
         
         tk.Label(leaderboard_frame, text="🏆 LEADERBOARD 🏆", 
                 font=('Arial', 16, 'bold'), bg='#2c3e50', fg='#f39c12').pack()
@@ -284,7 +297,7 @@ leaderboard!"""
         
         self.leaderboard_listbox = tk.Listbox(lb_frame, yscrollcommand=scrollbar.set,
                                              bg='#34495e', fg='#ecf0f1',
-                                             font=('Arial', 10))
+                                             font=('Arial', 12))
         self.leaderboard_listbox.pack(side=tk.LEFT, fill='both', expand=True)
         scrollbar.config(command=self.leaderboard_listbox.yview)
         

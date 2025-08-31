@@ -760,11 +760,7 @@ leaderboard!"""
         self.leaderboard_listbox.delete(0, tk.END)
         
         for i, player in enumerate(leaderboard, 1):
-            if i <= 3:
-                medals = ["🥇", "🥈", "🥉"]
-                medal = medals[i-1]
-            else:
-                medal = f"{i}."
+            medal = f"{i}."
             
             # Show display name if it's the current player
             display_name = player['name']
